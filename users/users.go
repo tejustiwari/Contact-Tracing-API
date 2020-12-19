@@ -15,9 +15,7 @@ import (
 // If you want to export your function. You must to start upper case function name. Otherwise you won't see your function when you import that on other class.
 func ConnectDB() *mongo.Collection {
 
-	// Set client options
-	// clientOptions := options.Client().ApplyURI("your_cluster_endpoint")
-	clientOptions := options.Client().ApplyURI("mongodb+srv://tejus:q9L6hdvf3WosPMvY@cluster0.piyqn.mongodb.net/user?retryWrites=true&w=majority")
+	clientOptions := options.Client().ApplyURI("Your_MongoDB_URI")
 
 	// Connect to MongoDB
 	client, err := mongo.Connect(context.TODO(), clientOptions)
