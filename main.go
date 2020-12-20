@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/tejustiwari/contact_api_project/schema"
 	usersDatabase "github.com/tejustiwari/contact_api_project/users"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // Connecting with mongoDB
@@ -85,22 +85,30 @@ func getContacts(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 	userID := query.Get("user")
-	t, err := time.Parse("0102030405060700", query.Get("infection_timestamp"))
+
+	infectionTimestamp, err := time.Parse(time.RFC3339, query.Get("infection_timestamp"))
+
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
-	infectionTimestamp := t
 	var fourteenDaysBeforeTimestamp = infectionTimestamp.AddDate(0, 0, -14)
 
-	var contactsArray []string
+	var contactsArray []schema.Contact
+	var usersArray []string
 
-	matchID := bson.M{"useridone": userID, "$or": bson.M{"useridtwo": userID}}
-	matchTime := bson.M{"timeofcontact": bson.M{"$gt": fourteenDaysBeforeTimestamp}}
-	cur, err := contacts.Aggregate(ctx, mongo.Pipeline{matchID, matchTime})
-
-	if err != nil {
-		log.Fatal(err, w)
-	}
+	cur, err := contacts.Find(
+		context.TODO(),
+		bson.D{
+			{"$or",
+				bson.A{
+					bson.D{{"useridone", userID}},
+					bson.D{{"useridtwo", userID}},
+				},
+			},
+			{"timeofcontact", bson.M{"$gte": fourteenDaysBeforeTimestamp}},
+			{"timeofcontact", bson.M{"$lte": infectionTimestamp}},
+		},
+	)
 
 	// Close the cursor once finished
 	defer cur.Close(context.TODO())
@@ -116,11 +124,11 @@ func getContacts(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// add item our array
-		// contactsArray = append(contactsArray, contact)
+		contactsArray = append(contactsArray, contact)
 		if userID == contact.UserIDTwo {
-			contactsArray = append(contactsArray, contact.UserIDOne)
+			usersArray = append(usersArray, contact.UserIDOne)
 		} else {
-			contactsArray = append(contactsArray, contact.UserIDTwo)
+			usersArray = append(usersArray, contact.UserIDTwo)
 		}
 
 	}
@@ -129,7 +137,7 @@ func getContacts(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	json.NewEncoder(w).Encode(contactsArray) // encode similar to serialize process.
+	json.NewEncoder(w).Encode(usersArray) // encode similar to serialize process.
 }
 
 func main() {
@@ -137,10 +145,7 @@ func main() {
 	http.HandleFunc("/users", createUser)
 	http.HandleFunc("/", getUser) // Generic Route, regular exp matching is done in getUser Handler
 	http.HandleFunc("/contacts", createContact)
-	// http.HandleFunc("/users/uid_58", getUser)
-	// http.HandleFunc(fmt.Sprintf("/users/%s", userID), getUser)
-	// Rewriter(http.HandleFunc("/users/{id}", getUser))
-	// http.HandleFunc("/contacts", getContacts)
+	http.HandleFunc("/contacts/", getContacts)
 
 	// Set PORT address
 	err := http.ListenAndServe(":3000", nil)

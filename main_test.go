@@ -6,7 +6,7 @@ func TestCreateUser(t *testing.T) {
 	t.Error() // to indicate test failed
 }
 
-func TestgetUsers(t *testing.T) {
+func TestGetUsers(t *testing.T) {
 	t.Error() // to indicate test failed
 }
 
@@ -14,6 +14,6 @@ func TestCreateContact(t *testing.T) {
 	t.Error() // to indicate test failed
 }
 
-func TestgetContacts(t *testing.T) {
+func TestGetContacts(t *testing.T) {
 	t.Error() // to indicate test failed
 }
